@@ -31,6 +31,7 @@ import csv
 import json
 import os
 import socket
+import re
 from itertools import pairwise
 
 import numpy as np
