@@ -167,6 +167,15 @@ def post_to_url(url, data):
     r = requests.post(url, data=data, headers=headers)
     r.raise_for_status()
 
+def is_url_valid(url):
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+    except requests.exceptions.RequestException:
+        return False
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -252,4 +261,8 @@ if __name__ == "__main__":
             f.write("\n")
 
     if FLAGS.url is not None:
-        post_to_url(FLAGS.url, json.dumps(data))
+        if is_url_valid(FLAGS.url):
+            post_to_url(FLAGS.url, json.dumps(data))
+        else:
+            print(f"Provided URL is invalid or unreachable: {FLAGS.url}")
+            sys.exit(171)
