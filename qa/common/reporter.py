@@ -169,7 +169,7 @@ def post_to_url(url, data):
 
 def is_url_valid(url):
     try:
-        domain_url = re.search(r"https?://(?:www\.)?([^/]+)", url).group(10
+        domain_url = re.search(r"https?://(?:www\.)?([^/]+)", url).group(0)
         response = requests.get(domain_url)
         print(f"[INFO] - {domain_url} : response code : {response.status_code}")
         if response.status_code == 200:
