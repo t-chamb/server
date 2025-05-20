@@ -65,6 +65,7 @@ from schemas.openai import (
     ChatCompletionStreamResponseDelta,
     ChatCompletionToolChoiceOption1,
     Choice,
+    CompletionUsage,
     CreateChatCompletionRequest,
     CreateChatCompletionResponse,
     CreateChatCompletionStreamResponse,
@@ -225,6 +226,17 @@ class TritonLLMEngine(LLMEngine):
             backend=metadata.backend,
         )
 
+        prompt_tokens = len(metadata.tokenizer.encode(prompt))
+        completion_tokens = len(
+            metadata.tokenizer.encode(text, add_special_tokens=False)
+        )
+        total_tokens = prompt_tokens + completion_tokens
+        usage = CompletionUsage(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+        )
+
         return CreateChatCompletionResponse(
             id=request_id,
             choices=[
@@ -239,6 +251,7 @@ class TritonLLMEngine(LLMEngine):
             model=request.model,
             system_fingerprint=None,
             object=ObjectType.chat_completion,
+            usage=usage,
         )
 
     def _get_chat_completion_response_message(
