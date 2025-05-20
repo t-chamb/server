@@ -30,6 +30,7 @@ from __future__ import annotations
 import json
 import time
 import uuid
+import ctypes
 from dataclasses import dataclass
 from typing import (
     Any,
@@ -226,16 +227,32 @@ class TritonLLMEngine(LLMEngine):
             backend=metadata.backend,
         )
 
-        prompt_tokens = len(metadata.tokenizer.encode(prompt))
-        completion_tokens = len(
-            metadata.tokenizer.encode(text, add_special_tokens=False)
-        )
-        total_tokens = prompt_tokens + completion_tokens
-        usage = CompletionUsage(
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            total_tokens=total_tokens,
-        )
+        prompt_tokens = None
+        completion_tokens = None
+        usage = None
+
+        if (
+            "num_input_tokens" in response.outputs
+            and "num_output_tokens" in response.outputs
+        ):
+            input_token_tensor = response.outputs["num_input_tokens"]
+            output_token_tensor = response.outputs["num_output_tokens"]
+
+            if input_token_tensor.data_type == tritonserver.DataType.UINT32:
+                prompt_tokens_ptr = ctypes.cast(input_token_tensor.data_ptr, ctypes.POINTER(ctypes.c_uint32))
+                prompt_tokens = prompt_tokens_ptr[0]
+
+            if output_token_tensor.data_type == tritonserver.DataType.UINT32:
+                completion_tokens_ptr = ctypes.cast(output_token_tensor.data_ptr, ctypes.POINTER(ctypes.c_uint32))
+                completion_tokens = completion_tokens_ptr[0]
+            
+            if prompt_tokens is not None and completion_tokens is not None:
+                total_tokens = prompt_tokens + completion_tokens
+                usage = CompletionUsage(
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    total_tokens=total_tokens,
+                )
 
         return CreateChatCompletionResponse(
             id=request_id,
