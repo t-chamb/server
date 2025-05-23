@@ -1094,7 +1094,7 @@ ModelInferHandler::InferResponseComplete(
                    << ", skipping response generation as grpc transaction was "
                       "cancelled... ";
 
-    if (is_complete) {
+    //if (is_complete) {
       if (state->delay_enqueue_ms_ != 0) {
         // Will delay PutTaskBackToQueue by the specified time.
         // This can be used to test the flow when cancellation request
@@ -1110,8 +1110,7 @@ ModelInferHandler::InferResponseComplete(
       // in the next cycle.
       state->context_->PutTaskBackToQueue(state);
       delete response_release_payload;
-    }
-
+    //}
     return;
   }
 
