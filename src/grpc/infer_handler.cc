@@ -1078,9 +1078,20 @@ ModelInferHandler::InferResponseComplete(
                  << ", callback index: " << state->cb_count_
                  << ", flags: " << flags
                  << ", response is nullptr: " << (iresponse == nullptr)
+                 << ", state->complete_: " << state->complete_
                  << ", flags & TRITONSERVER_RESPONSE_COMPLETE_FINAL: "
                  << (flags & TRITONSERVER_RESPONSE_COMPLETE_FINAL);
 
+  bool is_complete = (flags & TRITONSERVER_RESPONSE_COMPLETE_FINAL) != 0;
+
+  // Allow sending 1 response and final flag separately, only mark
+  // non-inflight when seeing final flag
+  if (is_complete) {
+    state->context_->EraseInflightState(state);
+    std::cerr
+        << "------------ EraseInflightState(state) called (before cancel check)"
+        << std::endl;
+  }
 
   // If gRPC Stream is cancelled then no need of forming and returning
   // a response.
@@ -1092,21 +1103,16 @@ ModelInferHandler::InferResponseComplete(
         "deleting GRPC inference response");
 
     state->context_->EraseInflightState(state);
+    state->step_ = Steps::CANCELLED;
     std::cerr << "------------ EraseInflightState(state) called in cancel path"
               << std::endl;
 
-    // Only put the task back to the queue and set to CANCELLED if it hasn't
-    // been already. This prevents duplicate timer issues if this cancellation
-    // block is entered multiple times for the same state due to multiple
-    // callbacks from a cancelled request.
-    if (state->step_ != Steps::CANCELLED) {
-      state->step_ = Steps::CANCELLED;
+    LOG_VERBOSE(1) << "ModelInferHandler::InferResponseComplete, "
+                   << state->unique_id_
+                   << ", skipping response generation as grpc transaction was "
+                      "cancelled... ";
 
-      LOG_VERBOSE(1)
-          << "ModelInferHandler::InferResponseComplete, " << state->unique_id_
-          << ", skipping response generation as grpc transaction was "
-             "cancelled... ";
-
+    if (is_complete) {
       if (state->delay_enqueue_ms_ != 0) {
         // Will delay PutTaskBackToQueue by the specified time.
         // This can be used to test the flow when cancellation request
@@ -1117,45 +1123,20 @@ ModelInferHandler::InferResponseComplete(
         std::this_thread::sleep_for(
             std::chrono::milliseconds(state->delay_enqueue_ms_));
       }
+
       // Send state back to the queue so that state can be released
       // in the next cycle.
       state->context_->PutTaskBackToQueue(state);
-      std::cerr << "------------ PutTaskBackToQueue(state) called in cancel "
-                   "path"
-                << std::endl;
-    } else {
-      LOG_VERBOSE(1) << "ModelInferHandler::InferResponseComplete, "
-                     << state->unique_id_
-                     << ", grpc transaction was already cancelled and "
-                        "processed... (re-entry to cancel block)";
+      std::cerr << "------------ PutTaskBackToQueue(state) called in cancel path" << std::endl;
+      delete response_release_payload;
+      std::cerr << "------------ Deleting response_release_payload in CANCELLED path (FINAL)" << std::endl;
     }
 
-    // Only delete the payload if this is the FINAL callback from Triton Core.
-    // Triton Core is expected to signal finalization even for cancelled
-    // requests.
-    if (flags & TRITONSERVER_RESPONSE_COMPLETE_FINAL) {
-      std::cerr << "------------ Deleting response_release_payload in "
-                   "CANCELLED path (FINAL)"
-                << std::endl;
-      delete response_release_payload;
-    } else {
-      std::cerr << "------------ Deferred delete of response_release_payload "
-                   "in CANCELLED path (NOT FINAL)"
-                << std::endl;
-    }
     return;
   }
 
   std::cerr << "------------ gRPC Context IS NOT CANCELLED" << std::endl;
 
-  // Allow sending 1 response and final flag separately, only mark
-  // non-inflight when seeing final flag
-  if (flags & TRITONSERVER_RESPONSE_COMPLETE_FINAL) {
-    state->context_->EraseInflightState(state);
-    std::cerr << "------------ EraseInflightState(state) called (FINAL, "
-                 "non-cancelled path)"
-              << std::endl;
-  }
 
   TRITONSERVER_Error* err = nullptr;
   // This callback is expected to be called exactly once for each request.
@@ -1201,7 +1182,7 @@ ModelInferHandler::InferResponseComplete(
 
   // Defer sending the response until FINAL flag is seen or
   // there is error
-  if ((flags & TRITONSERVER_RESPONSE_COMPLETE_FINAL) == 0) {
+  if (!is_complete) {
     std::cerr << "------------ Return due to NOT "
                  "TRITONSERVER_RESPONSE_COMPLETE_FINAL (non-cancelled path)"
               << std::endl;
