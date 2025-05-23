@@ -1071,12 +1071,7 @@ ModelInferHandler::InferResponseComplete(
   bool is_complete = (flags & TRITONSERVER_RESPONSE_COMPLETE_FINAL) != 0;
 
   LOG_VERBOSE(1) << "ModelInferHandler::InferResponseComplete, "
-                 << state->unique_id_ << " step: " << state->step_
-                 << ", callback index: " << state->cb_count_
-                 << ", flags: " << flags
-                 << ", response is nullptr: " << (iresponse == nullptr)
-                 << ", TRITONSERVER_RESPONSE_COMPLETE_FINAL is set: "
-                 << is_complete;
+                 << state->unique_id_ << " step " << state->step_;
 
   // Allow sending 1 response and final flag separately, only mark
   // non-inflight when seeing final flag
@@ -1110,6 +1105,7 @@ ModelInferHandler::InferResponseComplete(
         std::this_thread::sleep_for(
             std::chrono::milliseconds(state->delay_enqueue_ms_));
       }
+
       // Send state back to the queue so that state can be released
       // in the next cycle.
       state->context_->PutTaskBackToQueue(state);
@@ -1181,7 +1177,6 @@ ModelInferHandler::InferResponseComplete(
 
   state->step_ = Steps::COMPLETE;
   state->context_->responder_->Finish(*response, state->status_, state);
-
   if (response_created) {
     delete response;
   }
