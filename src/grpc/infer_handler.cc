@@ -1116,6 +1116,9 @@ ModelInferHandler::InferResponseComplete(
   }
 
   TRITONSERVER_Error* err = nullptr;
+  // This callback is expected to be called exactly once for each request.
+  // Will use the single response object in the response list to hold the
+  // information.
   inference::ModelInferResponse* response =
       state->response_queue_->GetResponseAt(0);
   bool response_created = false;
@@ -1159,6 +1162,7 @@ ModelInferHandler::InferResponseComplete(
   if (!is_complete) {
     return;
   }
+
 
 #ifdef TRITON_ENABLE_TRACING
   state->trace_timestamps_.emplace_back(
