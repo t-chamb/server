@@ -149,6 +149,12 @@ CommonCallData<ResponderType, RequestType, ResponseType>::Process(bool rpc_ok)
 {
   LOG_VERBOSE(1) << "Process for " << name_ << ", rpc_ok=" << rpc_ok << ", "
                  << id_ << " step " << step_;
+  
+  if (name_ == "ServerLive" || name_ == "ServerReady" || name_ == "Check") {
+    LOG_VERBOSE(1) << "---- GRPC_HEALTH_CALL: " << name_
+                   << " Process entry. rpc_ok=" << ok
+                   << ", step=" << step_;
+  }
 
   // If RPC failed on a new request then the server is shutting down
   // and so we should do nothing (including not registering for a new
@@ -188,6 +194,7 @@ CommonCallData<ResponderType, RequestType, ResponseType>::Process(bool rpc_ok)
     step_ = Steps::FINISH;
   }
 
+  LOG_VERBOSE(1) << "----- GRPC_COMMON_CALL_DATA: Process FINISH for " << name_ << ", " << id_;
   return step_ != Steps::FINISH;
 }
 
@@ -196,7 +203,14 @@ void
 CommonCallData<ResponderType, RequestType, ResponseType>::Execute()
 {
   if (ExecutePrecondition()) {
+    if (name_ == "ServerLive" || name_ == "ServerReady" || name_ == "Check") {
+    LOG_VERBOSE(1) << "---- GRPC_HEALTH_CALL: " << name_ << " Execute BEGIN";
+    }
     OnExecute_(request_, &response_, &status_);
+    if (name_ == "ServerLive" || name_ == "ServerReady" || name_ == "Check") {
+    LOG_VERBOSE(1) << "---- GRPC_HEALTH_CALL: " << name_
+                   << " Execute END (status: " << status_.error_code();
+    }
   } else {
     status_ = ::grpc::Status(
         ::grpc::StatusCode::UNAVAILABLE,
@@ -352,12 +366,15 @@ CommonHandler::Start()
 
     while (cq_->Next(&tag, &ok)) {
       ICallData* call_data = static_cast<ICallData*>(tag);
+      LOG_VERBOSE(1) << "----- GRPC_COMMON_HANDLER: " << call_data->Name() << ", Id " << call_data->Id()
+               << ": cq_->Next() returned ok=" << ok << ", step=" << (int)call_data->step_;
       if (!call_data->Process(ok)) {
         LOG_VERBOSE(1) << "Done for " << call_data->Name() << ", "
                        << call_data->Id();
         delete call_data;
       }
     }
+    LOG_VERBOSE(1) << "----- GRPC_COMMON_HANDLER: Thread exiting for " << Name();
   }));
 
   barrier->Wait();
@@ -2542,7 +2559,11 @@ Server::Start()
         TRITONSERVER_ERROR_ALREADY_EXISTS, "GRPC server is already running.");
   }
 
+  LOG_INFO << "------ GRPC_SERVER: Before builder_.BuildAndStart()";
+
   server_ = builder_.BuildAndStart();
+
+  LOG_INFO << "------ GRPC_SERVER: After builder_.BuildAndStart(), bound_port" << bound_port_;
   // Check if binding port failed
   if (bound_port_ == 0) {
     return TRITONSERVER_ErrorNew(
@@ -2550,6 +2571,8 @@ Server::Start()
         (std::string("Socket '") + server_addr_ + "' already in use ").c_str());
   }
 
+  
+  LOG_INFO << "------ GRPC_SERVER: Calling common_handler_->Start()";
   common_handler_->Start();
   for (auto& model_infer_handler : model_infer_handlers_) {
     model_infer_handler->Start();
@@ -2559,7 +2582,7 @@ Server::Start()
   }
 
   running_ = true;
-  LOG_INFO << "Started GRPCInferenceService at " << server_addr_;
+  LOG_INFO << "----- Started GRPCInferenceService at " << server_addr_;
   return nullptr;  // success
 }
 
