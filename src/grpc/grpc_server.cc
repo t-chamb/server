@@ -96,6 +96,7 @@ class CommonCallData : public ICallData {
         async_(async), cq_(cq), responder_(&ctx_), step_(Steps::START),
         restricted_kv_(restricted_kv), response_delay_(response_delay)
   {
+    LOG_VERBOSE(1) << name_ << ", " << id_ << ": Calling OnRegister_";
     OnRegister_(&ctx_, &request_, &responder_, this);
     LOG_VERBOSE(1) << "Ready for RPC '" << name_ << "', " << id_;
   }
@@ -152,8 +153,7 @@ CommonCallData<ResponderType, RequestType, ResponseType>::Process(bool rpc_ok)
   
   if (name_ == "ServerLive" || name_ == "ServerReady" || name_ == "Check") {
     LOG_VERBOSE(1) << "---- GRPC_HEALTH_CALL: " << name_
-                   << " Process entry. rpc_ok=" << ok
-                   << ", step=" << step_;
+                   << " Process entry. rpc_ok=" << rpc_ok;
   }
 
   // If RPC failed on a new request then the server is shutting down
@@ -358,16 +358,21 @@ CommonHandler::Start()
   auto barrier = std::make_shared<Barrier>(2);
 
   thread_.reset(new std::thread([this, barrier] {
+    LOG_VERBOSE(1) << "----- GRPC_COMMON_HANDLER: Started SetUpAllRequests()";
     SetUpAllRequests();
+    LOG_VERBOSE(1) << "----- GRPC_COMMON_HANDLER: Done SetUpAllRequests()";
+    LOG_VERBOSE(1) << "----- GRPC_COMMON_HANDLER: Started barrier->Wait()";
     barrier->Wait();
+    LOG_VERBOSE(1) << "----- GRPC_COMMON_HANDLER: Done barrier->Wait()";
 
     void* tag;
     bool ok;
 
+    LOG_VERBOSE(1) << "----- GRPC_COMMON_HANDLER: Started while (cq_->Next(&tag, &ok))";
     while (cq_->Next(&tag, &ok)) {
       ICallData* call_data = static_cast<ICallData*>(tag);
-      LOG_VERBOSE(1) << "----- GRPC_COMMON_HANDLER: " << call_data->Name() << ", Id " << call_data->Id()
-               << ": cq_->Next() returned ok=" << ok << ", step=" << (int)call_data->step_;
+      LOG_VERBOSE(1) << "----- GRPC_COMMON_HANDLER: cq_->Next() DEQUEUED for " << call_data->Name() << ", Id " << call_data->Id()
+               << ": cq_->Next() returned ok=" << ok << ", step=";
       if (!call_data->Process(ok)) {
         LOG_VERBOSE(1) << "Done for " << call_data->Name() << ", "
                        << call_data->Id();
@@ -406,41 +411,60 @@ CommonHandler::SetUpAllRequests()
 
   // health (GRPC standard)
   RegisterHealthCheck();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterHealthCheck() ";
   // health (Triton)
   RegisterServerLive();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterServerLive() ";
   RegisterServerReady();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterServerReady() ";
   RegisterModelReady();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterModelReady() ";
 
   // Metadata
   RegisterServerMetadata();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterServerMetadata() ";
   RegisterModelMetadata();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterModelMetadata() ";
 
   // model config
   RegisterModelConfig();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterModelConfig() ";
 
   // shared memory
   // system..
   RegisterSystemSharedMemoryStatus();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterSystemSharedMemoryStatus() ";
   RegisterSystemSharedMemoryRegister();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterSystemSharedMemoryRegister() ";
   RegisterSystemSharedMemoryUnregister();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterSystemSharedMemoryUnregister() ";
   // cuda..
   RegisterCudaSharedMemoryStatus();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterCudaSharedMemoryStatus() ";
   RegisterCudaSharedMemoryRegister();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterCudaSharedMemoryRegister() ";
   RegisterCudaSharedMemoryUnregister();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterCudaSharedMemoryUnregister() ";
 
   // model repository
   RegisterRepositoryIndex();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterRepositoryIndex() ";
   RegisterRepositoryModelLoad();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterRepositoryModelLoad() ";
   RegisterRepositoryModelUnload();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterRepositoryModelUnload() ";
 
   // statistics
   RegisterModelStatistics();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterModelStatistics() ";
 
   // trace
   RegisterTrace();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterTrace() ";
 
   // logging
   RegisterLogging();
+  LOG_VERBOSE(1) << "----- Done CommonHandler::RegisterLogging() ";
 }
 
 void
