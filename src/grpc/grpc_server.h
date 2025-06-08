@@ -125,6 +125,7 @@ class Server {
       uint32_t* exit_timeout_secs, const std::string& service_name);
 
  private:
+  //TRITONSERVER_Error* PollTillLive();
   Server(
       const std::shared_ptr<TRITONSERVER_Server>& tritonserver,
       triton::server::TraceManager* trace_manager,
