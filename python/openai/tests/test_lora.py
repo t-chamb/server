@@ -49,11 +49,10 @@ class LoRATest(unittest.TestCase):
     # TODO: Find a LoRA model that has its own tokenizer.
     _tokenizer = "meta-llama/Meta-Llama-3.1-8B-Instruct"
     _lora_separator = "_lora_"
-    _prompt = "What is LAPR?"
+    _prompt = "What is the difference between pets and cattle?"
     # more prompts that may yield different outputs:
     # - "Why can camels survive for long without water?"
     # - "What is LAPR?"
-    # - "What is the difference between pets and cattle?"
     _temperature = 0
     _top_p = 1
 
