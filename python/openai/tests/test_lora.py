@@ -49,7 +49,7 @@ class LoRATest(unittest.TestCase):
     # TODO: Find a LoRA model that has its own tokenizer.
     _tokenizer = "meta-llama/Meta-Llama-3.1-8B-Instruct"
     _lora_separator = "_lora_"
-    _prompt = "When was the wheel invented?"
+    _prompt = "What is LAPR?"
     # more prompts that may yield different outputs:
     # - "Why can camels survive for long without water?"
     # - "What is LAPR?"
