@@ -556,7 +556,9 @@ class TestChatCompletionsTokenizers:
         model: str,
         messages: List[dict],
     ):
-        app = setup_fastapi_app(tokenizer="", server=server, backend=backend)
+        app = setup_fastapi_app(
+            tokenizer="", server=server, backend=backend, default_max_tokens=16
+        )
         with TestClient(app) as client:
             response = client.post(
                 "/v1/chat/completions",
@@ -584,10 +586,16 @@ class TestChatCompletionsTokenizers:
         # Compare the downloaded tokenizer response against remote HF equivalent
         # to assert equivalent functionality in responses and chat template.
         app_local = setup_fastapi_app(
-            tokenizer=custom_tokenizer_path, server=server, backend=backend
+            tokenizer=custom_tokenizer_path,
+            server=server,
+            backend=backend,
+            default_max_tokens=16,
         )
         app_hf = setup_fastapi_app(
-            tokenizer=tokenizer_model, server=server, backend=backend
+            tokenizer=tokenizer_model,
+            server=server,
+            backend=backend,
+            default_max_tokens=16,
         )
 
         responses = []
@@ -632,7 +640,10 @@ class TestChatCompletionsTokenizers:
         invalid_chat_tokenizer = "gpt2"
         try:
             app = setup_fastapi_app(
-                tokenizer=invalid_chat_tokenizer, server=server, backend=backend
+                tokenizer=invalid_chat_tokenizer,
+                server=server,
+                backend=backend,
+                default_max_tokens=16,
             )
         except OSError as e:
             expected_msg = f"We couldn't connect to 'https://huggingface.co' to load this file, couldn't find it in the cached files and it looks like {invalid_chat_tokenizer} is not the path to a directory containing a file named config.json."

@@ -120,7 +120,10 @@ def server():
 def fastapi_client_class_scope():
     server = setup_server(model_repository=TEST_MODEL_REPOSITORY)
     app = setup_fastapi_app(
-        tokenizer=TEST_TOKENIZER, server=server, backend=TEST_BACKEND
+        tokenizer=TEST_TOKENIZER,
+        server=server,
+        backend=TEST_BACKEND,
+        default_max_tokens=16,
     )
     with TestClient(app) as test_client:
         yield test_client
