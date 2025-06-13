@@ -157,7 +157,7 @@ def _create_trtllm_inference_request(
     if request.stop:
         if isinstance(request.stop, str):
             request.stop = [request.stop]
-        inputs["stop_words"] = [request.stop]
+        inputs["stop_words"] = np.array([request.stop], dtype=np.object_)
     # Check "is not None" specifically, because values of zero are valid.
     if request.top_p is not None:
         inputs["top_p"] = np.float32([[request.top_p]])

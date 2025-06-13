@@ -146,12 +146,14 @@ class TestAsyncOpenAIClient:
         self, client: openai.AsyncOpenAI, model: str, prompt: str
     ):
         # Test single completion for comparison
+        seed = 42
         chat_completion = await client.completions.create(
             model=model,
             prompt=prompt,
             max_tokens=10,
             temperature=0.0,
             stream=False,
+            seed=seed,
         )
         output = chat_completion.choices[0].text
         stop_reason = chat_completion.choices[0].finish_reason
@@ -163,6 +165,7 @@ class TestAsyncOpenAIClient:
             max_tokens=10,
             temperature=0.0,
             stream=True,
+            seed=seed,
         )
         chunks = []
         finish_reason_count = 0
