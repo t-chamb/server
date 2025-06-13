@@ -53,7 +53,10 @@ def setup_server(model_repository: str):
 
 
 def setup_fastapi_app(
-    tokenizer: str, server: tritonserver.Server, backend: str, default_max_tokens: int
+    tokenizer: str,
+    server: tritonserver.Server,
+    backend: str,
+    default_max_tokens: int = 16,
 ):
     engine: TritonLLMEngine = TritonLLMEngine(
         server=server,
