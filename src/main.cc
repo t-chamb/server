@@ -510,8 +510,30 @@ main(int argc, char** argv)
     exit(1);
   }
 
+  // ------------------------------------------------------------
+  // Wait for the server to be live before polling the model repository
+  /*bool live = false;
+  while (!live) {
+    TRITONSERVER_Error* err = TRITONSERVER_ServerIsLive(server_ptr, &live);
+    if (err != nullptr) {
+      LOG_TRITONSERVER_ERROR(err, "failed to get server liveness");
+      exit(1);
+    }
+    if (live) {
+      break;
+    }
+    if (triton::server::signal_exiting_) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  // -------------------------------------------------
+  */
   // Wait until a signal terminates the server...
+
+  LOG_VERBOSE(1) << "----- g_triton_params.repository_poll_secs_: " << g_triton_params.repository_poll_secs_;
   while (!triton::server::signal_exiting_) {
+    LOG_VERBOSE(1) << "----- g_triton_params.repository_poll_secs_: " << g_triton_params.repository_poll_secs_;
     // If enabled, poll the model repository to see if there have been
     // any changes.
     if (g_triton_params.repository_poll_secs_ > 0) {

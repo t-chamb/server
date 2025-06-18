@@ -42,7 +42,6 @@
 
 #include "../classification.h"
 #include "../common.h"
-//#include "grpc++/create_channel.h"
 #include "grpc++/grpc++.h"
 #include "grpc++/security/server_credentials.h"
 #include "grpc++/server.h"
@@ -2606,17 +2605,6 @@ Server::Start()
     model_stream_infer_handler->Start();
   }
 
-  // --------------------- Poll until the server is actually live.
-  //TRITONSERVER_Error* err = PollTillLive();
-  //if (err != nullptr) {
-  //  // If polling fails, we need to stop the server that we started.
-  //  // The Stop() is not graceful and may not release all resources
-  //  // properly. But the server is in a bad state anyway.
-  //  Stop();
-  //  return err;
-  //}
-  // ---------------------------------------------
-
   running_ = true;
   LOG_INFO << "----- Started GRPCInferenceService at " << server_addr_;
   return nullptr;  // success
@@ -2705,43 +2693,5 @@ Server::WaitForConnectionsToClose(
 
   return nullptr;  // complete
 }
-
-// -------------------------------------------------------
-//TRITONSERVER_Error*
-//Server::PollTillLive()
-//{
-//  // We are polling ourself, so can use insecure channel.
-//  auto channel =
-//      ::grpc::CreateChannel(server_addr_, ::grpc::InsecureChannelCredentials());
-//  auto health_stub = ::grpc::health::v1::Health::NewStub(channel);
-//
-//  // Poll for 30 seconds.
-//  for (int i = 0; i < 30; ++i) {
-//    ::grpc::ClientContext context;
-//    // Don't let the client itself block. We are controlling the polling.
-//    context.set_wait_for_ready(false);
-//    ::grpc::health::v1::HealthCheckRequest request;
-//    // Request overall server health
-//    request.set_service("");
-//    ::grpc::health::v1::HealthCheckResponse response;
-//
-//    ::grpc::Status status = health_stub->Check(&context, request, &response);
-//
-//    if (status.ok() &&
-//        response.status() ==
-//            ::grpc::health::v1::HealthCheckResponse::SERVING) {
-//      LOG_VERBOSE(1) << "gRPC server is live.";
-//      return nullptr;  // Success
-//    }
-//
-//    LOG_VERBOSE(1) << "Waiting for gRPC server to be live...";
-//    std::this_thread::sleep_for(std::chrono::seconds(1));
-//  }
-//
-//  return TRITONSERVER_ErrorNew(
-//      TRITONSERVER_ERROR_UNAVAILABLE,
-//      "gRPC server failed to become live within 30 seconds.");
-//}
-// -------------------------------------------------------
 
 }}}  // namespace triton::server::grpc
